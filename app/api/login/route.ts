@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 
+const BACKEND_API_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8080';
+
 interface LoginRequest {
   email: string;
   password: string;
@@ -18,53 +20,42 @@ export async function POST(request: Request) {
       );
     }
 
-    // TODO: Add actual authentication logic here
-    // Example: Check credentials against database
-    // const user = await authenticateUser(email, password);
-    // if (!user) {
-    //   return NextResponse.json(
-    //     { error: 'Invalid email or password.' },
-    //     { status: 401 }
-    //   );
-    // }
+    // Proxy to real backend API
+    const backendResponse = await fetch(`${BACKEND_API_URL}/api/auth/login`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        username: email, // Backend uses 'username' field
+        password: password,
+      }),
+    });
 
-    // Replace this with actual authentication logic
-    // Different users for testing permissions:
-    // admin@test.com -> write permission for users
-    // user@test.com -> view permission for users (cannot edit)
-    const hasWritePermission = email.toLowerCase().includes('admin');
+    const data = await backendResponse.json();
 
-    const mockUser = {
-      id: '1',
-      email: email,
-      name: hasWritePermission ? 'Admin User' : 'Regular User',
-      token: 'mock-token',
-      role: hasWritePermission ? 'ADMIN' : 'USER',
-      permission: [
+    // If backend returns error, pass it through
+    if (!backendResponse.ok) {
+      return NextResponse.json(
         {
-          id: '',
-          resource: 'user',
-          permission: hasWritePermission ? 'write' : 'view'
+          error: data.message || 'Login failed',
+          success: false,
         },
-        {
-          id: '',
-          resource: 'product',
-          permission: 'write'
-        }
-      ]
-    };
+        { status: backendResponse.status }
+      );
+    }
 
+    // Return the backend response directly
+    // It should match the structure we defined in AuthContext
+    return NextResponse.json(data, { status: 200 });
+
+  } catch (error) {
+    console.error('Login API error:', error);
     return NextResponse.json(
       {
-        success: true,
-        user: mockUser,
-        token: mockUser.token,
+        error: 'An error occurred during login. Please try again.',
+        success: false,
       },
-      { status: 200 }
-    );
-  } catch (error) {
-    return NextResponse.json(
-      { error: 'An error occurred during login.' },
       { status: 500 }
     );
   }

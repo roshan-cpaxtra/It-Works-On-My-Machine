@@ -22,6 +22,7 @@ import {
 } from "@mui/material";
 import EditIcon from "@mui/icons-material/Edit";
 import CloseIcon from "@mui/icons-material/Close";
+import AddIcon from "@mui/icons-material/Add";
 
 type User = {
   id: string;
@@ -46,14 +47,27 @@ const Users = () => {
   const [loading, setLoading] = useState(true);
   const [toastOpen, setToastOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState("");
+  const [toastSeverity, setToastSeverity] = useState<"success" | "error">("error");
   const [searchQuery, setSearchQuery] = useState("");
   const [employeeTypeFilter, setEmployeeTypeFilter] = useState<string>("all");
   const [departmentFilter, setDepartmentFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [openModal, setOpenModal] = useState(false);
+  const [openAddModal, setOpenAddModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [newUser, setNewUser] = useState({
+    username: "",
+    displayName: "",
+    employeeId: "",
+    employeeType: "FULL_TIME",
+    phoneNo: "",
+    departmentCode: "",
+    departmentName: "",
+    role: "ADMIN",
+  });
   const [hasWritePermission, setHasWritePermission] = useState(false);
   const [hackAlertOpen, setHackAlertOpen] = useState(false);
+  const [createLoading, setCreateLoading] = useState(false);
 
   useEffect(() => {
     // Check user permissions from localStorage
@@ -99,16 +113,38 @@ const Users = () => {
     const fetchUsers = async () => {
       try {
         setLoading(true);
-        const response = await fetch("/api/users");
+
+        // Get token from localStorage
+        const userData = localStorage.getItem('user');
+        const token = userData ? JSON.parse(userData).token : '';
+
+        // Call Next.js API route (which proxies to backend)
+        const response = await fetch("/api/users", {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        });
+
         if (!response.ok) {
           throw new Error("Failed to fetch users");
         }
-        const data = await response.json();
-        setUsers(data);
+
+        const apiResponse = await response.json();
+
+        // Transform API response to match the expected User type
+        if (apiResponse.success && apiResponse.data) {
+          // Assuming API returns users in apiResponse.data.users or apiResponse.data
+          const usersData = Array.isArray(apiResponse.data) ? apiResponse.data : apiResponse.data.users || [];
+          setUsers(usersData);
+        } else {
+          setUsers([]);
+        }
       } catch (err) {
         setToastMessage(
           err instanceof Error ? err.message : "An error occurred"
         );
+        setToastSeverity('error');
         setToastOpen(true);
       } finally {
         setLoading(false);
@@ -276,6 +312,86 @@ const Users = () => {
     setHackAlertOpen(false);
   };
 
+  const handleOpenAddModal = () => {
+    if (!hasWritePermission) {
+      setHackAlertOpen(true);
+      return;
+    }
+    setOpenAddModal(true);
+  };
+
+  const handleCloseAddModal = () => {
+    setOpenAddModal(false);
+    setNewUser({
+      username: "",
+      displayName: "",
+      employeeId: "",
+      employeeType: "FULL_TIME",
+      phoneNo: "",
+      departmentCode: "",
+      departmentName: "",
+      role: "ADMIN",
+    });
+  };
+
+  const handleCreateUser = async () => {
+    try {
+      setCreateLoading(true);
+
+      // Get token from localStorage
+      const userData = localStorage.getItem('user');
+      const token = userData ? JSON.parse(userData).token : '';
+
+      // Call Next.js API route to create user
+      const response = await fetch("/api/users", {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(newUser),
+      });
+
+      const apiResponse = await response.json();
+
+      if (!response.ok) {
+        throw new Error(apiResponse.message || 'Failed to create user');
+      }
+
+      // Show success message
+      setToastMessage('User created successfully');
+      setToastSeverity('success');
+      setToastOpen(true);
+
+      // Refresh user list
+      const listResponse = await fetch("/api/users", {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (listResponse.ok) {
+        const listData = await listResponse.json();
+        if (listData.success && listData.data) {
+          const usersData = Array.isArray(listData.data) ? listData.data : listData.data.users || [];
+          setUsers(usersData);
+        }
+      }
+
+      // Close modal
+      handleCloseAddModal();
+    } catch (err) {
+      setToastMessage(
+        err instanceof Error ? err.message : "Failed to create user"
+      );
+      setToastSeverity('error');
+      setToastOpen(true);
+    } finally {
+      setCreateLoading(false);
+    }
+  };
+
   if (loading) {
     return (
       <Box
@@ -301,7 +417,7 @@ const Users = () => {
       >
         <Alert
           onClose={handleCloseToast}
-          severity="error"
+          severity={toastSeverity}
           sx={{ width: "100%" }}
         >
           {toastMessage}
@@ -322,9 +438,20 @@ const Users = () => {
         </Alert>
       </Snackbar>
       <Box sx={{ p: 3 }}>
-        <Typography variant="h4" gutterBottom>
-          Users Management
-        </Typography>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+          <Typography variant="h4">
+            Users Management
+          </Typography>
+          <Button
+            variant="contained"
+            color="primary"
+            startIcon={<AddIcon />}
+            onClick={handleOpenAddModal}
+            disabled={!hasWritePermission}
+          >
+            Add User
+          </Button>
+        </Box>
 
         {/* Filters and Search */}
         <Stack spacing={2} sx={{ mb: 3 }}>
@@ -620,6 +747,180 @@ const Users = () => {
               </Button>
               <Button variant="contained" onClick={handleSaveUser}>
                 Save Changes
+              </Button>
+            </Stack>
+          </Box>
+        </Modal>
+
+        {/* Add User Modal */}
+        <Modal
+          open={openAddModal}
+          onClose={handleCloseAddModal}
+          aria-labelledby="add-user-modal"
+        >
+          <Box
+            sx={{
+              position: "absolute",
+              top: "50%",
+              left: "50%",
+              transform: "translate(-50%, -50%)",
+              width: { xs: "90%", sm: 600 },
+              maxHeight: "90vh",
+              overflow: "auto",
+              bgcolor: "background.paper",
+              boxShadow: 24,
+              borderRadius: 2,
+              p: 4,
+            }}
+          >
+            <Box
+              sx={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                mb: 3,
+              }}
+            >
+              <Typography variant="h5" component="h2">
+                Add New User
+              </Typography>
+              <IconButton onClick={handleCloseAddModal} size="small">
+                <CloseIcon />
+              </IconButton>
+            </Box>
+
+            <Stack spacing={2}>
+              <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
+                <TextField
+                  fullWidth
+                  label="Display Name"
+                  value={newUser.displayName}
+                  onChange={(e) =>
+                    setNewUser({
+                      ...newUser,
+                      displayName: e.target.value,
+                    })
+                  }
+                  required
+                />
+                <TextField
+                  fullWidth
+                  label="Username"
+                  value={newUser.username}
+                  onChange={(e) =>
+                    setNewUser({
+                      ...newUser,
+                      username: e.target.value,
+                    })
+                  }
+                  required
+                />
+              </Stack>
+              <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
+                <TextField
+                  fullWidth
+                  label="Employee ID"
+                  value={newUser.employeeId}
+                  onChange={(e) =>
+                    setNewUser({
+                      ...newUser,
+                      employeeId: e.target.value,
+                    })
+                  }
+                  required
+                />
+                <TextField
+                  fullWidth
+                  label="Phone Number"
+                  value={newUser.phoneNo}
+                  onChange={(e) =>
+                    setNewUser({
+                      ...newUser,
+                      phoneNo: e.target.value,
+                    })
+                  }
+                  required
+                />
+              </Stack>
+              <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
+                <FormControl fullWidth required>
+                  <InputLabel>Employee Type</InputLabel>
+                  <Select
+                    value={newUser.employeeType}
+                    label="Employee Type"
+                    onChange={(e) =>
+                      setNewUser({
+                        ...newUser,
+                        employeeType: e.target.value,
+                      })
+                    }
+                  >
+                    <MenuItem value="FULL_TIME">Full Time</MenuItem>
+                    <MenuItem value="PART_TIME">Part Time</MenuItem>
+                    <MenuItem value="CONTRACTOR">Contractor</MenuItem>
+                    <MenuItem value="INTERN">Intern</MenuItem>
+                  </Select>
+                </FormControl>
+                <FormControl fullWidth required>
+                  <InputLabel>Role</InputLabel>
+                  <Select
+                    value={newUser.role}
+                    label="Role"
+                    onChange={(e) =>
+                      setNewUser({
+                        ...newUser,
+                        role: e.target.value,
+                      })
+                    }
+                  >
+                    <MenuItem value="ADMIN">Admin</MenuItem>
+                    <MenuItem value="ELSE">Else</MenuItem>
+                  </Select>
+                </FormControl>
+              </Stack>
+              <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
+                <TextField
+                  fullWidth
+                  label="Department Code"
+                  value={newUser.departmentCode}
+                  onChange={(e) =>
+                    setNewUser({
+                      ...newUser,
+                      departmentCode: e.target.value,
+                    })
+                  }
+                  required
+                />
+                <TextField
+                  fullWidth
+                  label="Department Name"
+                  value={newUser.departmentName}
+                  onChange={(e) =>
+                    setNewUser({
+                      ...newUser,
+                      departmentName: e.target.value,
+                    })
+                  }
+                  required
+                />
+              </Stack>
+            </Stack>
+
+            <Stack
+              direction="row"
+              spacing={2}
+              sx={{ mt: 3 }}
+              justifyContent="flex-end"
+            >
+              <Button variant="outlined" onClick={handleCloseAddModal} disabled={createLoading}>
+                Cancel
+              </Button>
+              <Button
+                variant="contained"
+                onClick={handleCreateUser}
+                disabled={createLoading}
+              >
+                {createLoading ? <CircularProgress size={24} /> : 'Create User'}
               </Button>
             </Stack>
           </Box>
