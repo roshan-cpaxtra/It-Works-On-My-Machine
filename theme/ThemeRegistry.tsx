@@ -4,15 +4,27 @@ import * as React from 'react';
 import { ThemeProvider } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import { AppRouterCacheProvider } from '@mui/material-nextjs/v15-appRouter';
-import theme from './theme';
+import { ThemeModeProvider, useThemeMode } from '@/contexts/ThemeContext';
+import { createCustomTheme } from './theme';
+
+function ThemeContent({ children }: { children: React.ReactNode }) {
+  const { themeMode } = useThemeMode();
+  const theme = React.useMemo(() => createCustomTheme(themeMode), [themeMode]);
+
+  return (
+    <ThemeProvider theme={theme}>
+      <CssBaseline />
+      {children}
+    </ThemeProvider>
+  );
+}
 
 export default function ThemeRegistry({ children }: { children: React.ReactNode }) {
   return (
     <AppRouterCacheProvider>
-      <ThemeProvider theme={theme}>
-        <CssBaseline />
-        {children}
-      </ThemeProvider>
+      <ThemeModeProvider>
+        <ThemeContent>{children}</ThemeContent>
+      </ThemeModeProvider>
     </AppRouterCacheProvider>
   );
 }
