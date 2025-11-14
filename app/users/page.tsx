@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
+import { MainLayout } from "@/components/layout/MainLayout";
 import {
   Box,
   TextField,
@@ -224,7 +225,7 @@ const Users = () => {
   }
 
   return (
-    <>
+    <MainLayout>
       <Snackbar
         open={toastOpen}
         autoHideDuration={6000}
@@ -636,7 +637,7 @@ const Users = () => {
         </Box>
       </Modal>
     </Box>
-    </>
+    </MainLayout>
   );
 };
 
