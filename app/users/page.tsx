@@ -60,6 +60,7 @@ const Users = () => {
   const [hackAlertOpen, setHackAlertOpen] = useState(false);
   const [openCreateModal, setOpenCreateModal] = useState(false);
   const [createLoading, setCreateLoading] = useState(false);
+  const [editLoading, setEditLoading] = useState(false);
   const [newUser, setNewUser] = useState({
     username: "",
     email: "",
@@ -286,10 +287,71 @@ const Users = () => {
     setSelectedUser(null);
   };
 
-  const handleSaveUser = () => {
-    // Handle save logic here
-    console.log("Saving user:", selectedUser);
-    handleCloseModal();
+  const handleSaveUser = async () => {
+    if (!selectedUser) return;
+
+    try {
+      setEditLoading(true);
+
+      // Validate required fields
+      if (
+        !selectedUser.username ||
+        !selectedUser.email ||
+        !selectedUser.displayName ||
+        !selectedUser.employeeId ||
+        !selectedUser.phoneNo ||
+        !selectedUser.departmentCode ||
+        !selectedUser.departmentName
+      ) {
+        setToastMessage("Please fill in all required fields");
+        setToastSeverity("error");
+        setToastOpen(true);
+        return;
+      }
+
+      // Get user info from localStorage for API headers
+      const userStr = localStorage.getItem("user");
+      const user = userStr ? JSON.parse(userStr) : null;
+      const userPermission = user?.permission?.find(
+        (p: any) => p.resource === "user"
+      );
+
+      const response = await fetch(`/api/users/${selectedUser.id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          "x-user-permission": userPermission?.permission || "view",
+          "x-user-email": user?.email || "unknown",
+        },
+        body: JSON.stringify(selectedUser),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to update user");
+      }
+
+      setToastMessage("User updated successfully!");
+      setToastSeverity("success");
+      setToastOpen(true);
+      handleCloseModal();
+
+      // Refresh users list
+      const usersResponse = await fetch("/api/users");
+      if (usersResponse.ok) {
+        const usersData = await usersResponse.json();
+        setUsers(usersData);
+      }
+    } catch (err) {
+      setToastMessage(
+        err instanceof Error ? err.message : "An error occurred"
+      );
+      setToastSeverity("error");
+      setToastOpen(true);
+    } finally {
+      setEditLoading(false);
+    }
   };
 
   const handleCloseHackAlert = () => {
@@ -730,11 +792,19 @@ const Users = () => {
               sx={{ mt: 3 }}
               justifyContent="flex-end"
             >
-              <Button variant="outlined" onClick={handleCloseModal}>
+              <Button
+                variant="outlined"
+                onClick={handleCloseModal}
+                disabled={editLoading}
+              >
                 Cancel
               </Button>
-              <Button variant="contained" onClick={handleSaveUser}>
-                Save Changes
+              <Button
+                variant="contained"
+                onClick={handleSaveUser}
+                disabled={editLoading}
+              >
+                {editLoading ? <CircularProgress size={24} /> : "Save Changes"}
               </Button>
             </Stack>
           </Box>

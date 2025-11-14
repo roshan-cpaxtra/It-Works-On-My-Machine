@@ -1,4 +1,5 @@
-export  const users = [
+// Mutable users array that persists in memory during runtime
+export const users = [
   {
     id: "1d47f350-241e-4fb2-99e3-34c9692b8de4",
     username: "isabella.wright0",
