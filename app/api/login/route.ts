@@ -15,13 +15,16 @@ export async function POST(request: Request) {
     // Validate input
     if (!email || !password) {
       return NextResponse.json(
-        { error: 'Email and password are required.' },
+        {
+          success: false,
+          message: 'Email and password are required',
+        },
         { status: 400 }
       );
     }
 
     // Proxy to real backend API
-    const backendResponse = await fetch(`${BACKEND_API_URL}/api/auth/login`, {
+    const backendResponse = await fetch(`${BACKEND_API_URL}/v1/users/login`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -33,28 +36,28 @@ export async function POST(request: Request) {
     });
 
     const data = await backendResponse.json();
+    console.log('data',data)
 
     // If backend returns error, pass it through
     if (!backendResponse.ok) {
       return NextResponse.json(
         {
-          error: data.message || 'Login failed',
           success: false,
+          message: data.message || 'Login failed',
         },
         { status: backendResponse.status }
       );
     }
 
     // Return the backend response directly
-    // It should match the structure we defined in AuthContext
     return NextResponse.json(data, { status: 200 });
 
   } catch (error) {
     console.error('Login API error:', error);
     return NextResponse.json(
       {
-        error: 'An error occurred during login. Please try again.',
         success: false,
+        message: 'An error occurred during login. Please try again.',
       },
       { status: 500 }
     );

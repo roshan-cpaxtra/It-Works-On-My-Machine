@@ -32,18 +32,18 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSubmit }) => {
 
     let hasError = false;
 
-    if (!email) {
-      setEmailError('Email is required.');
-      hasError = true;
-    } else if (!emailRegex.test(email)) {
-      setEmailError('Please enter a valid email address.');
-      hasError = true;
-    }
+    // if (!email) {
+    //   setEmailError('Email is required.');
+    //   hasError = true;
+    // } else if (!emailRegex.test(email)) {
+    //   setEmailError('Please enter a valid email address.');
+    //   hasError = true;
+    // }
 
-    if (!password) {
-      setPasswordError('Password is required.');
-      hasError = true;
-    }
+    // if (!password) {
+    //   setPasswordError('Password is required.');
+    //   hasError = true;
+    // }
 
     if (hasError) {
       setLoading(false);

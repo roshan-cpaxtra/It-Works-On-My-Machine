@@ -68,6 +68,7 @@ const Users = () => {
   const [hasWritePermission, setHasWritePermission] = useState(false);
   const [hackAlertOpen, setHackAlertOpen] = useState(false);
   const [createLoading, setCreateLoading] = useState(false);
+  const [updateLoading, setUpdateLoading] = useState(false);
 
   useEffect(() => {
     // Check user permissions from localStorage
@@ -302,10 +303,73 @@ const Users = () => {
     setSelectedUser(null);
   };
 
-  const handleSaveUser = () => {
-    // Handle save logic here
-    console.log("Saving user:", selectedUser);
-    handleCloseModal();
+  const handleSaveUser = async () => {
+    if (!selectedUser) return;
+
+    try {
+      setUpdateLoading(true);
+
+      // Get token from localStorage
+      const userData = localStorage.getItem('user');
+      const token = userData ? JSON.parse(userData).token : '';
+
+      // Call Next.js API route to update user
+      const response = await fetch(`/api/users/${selectedUser.id}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          username: selectedUser.username,
+          displayName: selectedUser.displayName,
+          employeeId: selectedUser.employeeId,
+          employeeType: selectedUser.employeeType,
+          phoneNo: selectedUser.phoneNo,
+          departmentCode: selectedUser.departmentCode,
+          departmentName: selectedUser.departmentName,
+          role: selectedUser.role,
+        }),
+      });
+
+      const apiResponse = await response.json();
+
+      if (!response.ok) {
+        throw new Error(apiResponse.message || 'Failed to update user');
+      }
+
+      // Show success message
+      setToastMessage('User updated successfully');
+      setToastSeverity('success');
+      setToastOpen(true);
+
+      // Refresh user list
+      const listResponse = await fetch("/api/users", {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (listResponse.ok) {
+        const listData = await listResponse.json();
+        if (listData.success && listData.data) {
+          const usersData = Array.isArray(listData.data) ? listData.data : listData.data.users || [];
+          setUsers(usersData);
+        }
+      }
+
+      // Close modal
+      handleCloseModal();
+    } catch (err) {
+      setToastMessage(
+        err instanceof Error ? err.message : "Failed to update user"
+      );
+      setToastSeverity('error');
+      setToastOpen(true);
+    } finally {
+      setUpdateLoading(false);
+    }
   };
 
   const handleCloseHackAlert = () => {
@@ -742,11 +806,15 @@ const Users = () => {
               sx={{ mt: 3 }}
               justifyContent="flex-end"
             >
-              <Button variant="outlined" onClick={handleCloseModal}>
+              <Button variant="outlined" onClick={handleCloseModal} disabled={updateLoading}>
                 Cancel
               </Button>
-              <Button variant="contained" onClick={handleSaveUser}>
-                Save Changes
+              <Button
+                variant="contained"
+                onClick={handleSaveUser}
+                disabled={updateLoading}
+              >
+                {updateLoading ? <CircularProgress size={24} /> : 'Save Changes'}
               </Button>
             </Stack>
           </Box>
