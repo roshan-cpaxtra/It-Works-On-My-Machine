@@ -7,6 +7,8 @@ import {
   IconButton,
 } from '@mui/material';
 import { Visibility, VisibilityOff } from '@mui/icons-material';
+import { Modal } from '@/components/common/Modal';
+import { SecurityQuiz } from './SecurityQuiz';
 
 interface LoginFormProps {
   onSubmit?: (email: string, password: string) => void;
@@ -20,6 +22,8 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSubmit }) => {
   const [passwordError, setPasswordError] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [failureCount, setFailureCount] = useState(0);
+  const [showSecurityQuiz, setShowSecurityQuiz] = useState(false);
 
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -53,13 +57,35 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSubmit }) => {
     try {
       if (onSubmit) {
         await onSubmit(email, password);
+        setFailureCount(0);
       }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Login failed. Please try again.';
       setError(errorMessage);
+
+      // 실패 횟수 증가
+      const newFailureCount = failureCount + 1;
+      setFailureCount(newFailureCount);
+
+      // 3번째 실패 시 보안 퀴즈 표시
+      if (newFailureCount >= 3) {
+        setShowSecurityQuiz(true);
+      }
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleQuizPass = () => {
+    setShowSecurityQuiz(false);
+    setFailureCount(0);
+    setError('');
+  };
+
+  const handleQuizFail = () => {
+    setShowSecurityQuiz(false);
+    setError('Security Verification Failed. Please retry again.');
+    setFailureCount(0);
   };
 
   const handleTogglePasswordVisibility = () => {
@@ -151,6 +177,17 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSubmit }) => {
           </form>
         </div>
       </div>
+
+      <Modal
+        open={showSecurityQuiz}
+        onClose={() => {}}
+        type="warn"
+        title="Security verification"
+        content={<SecurityQuiz email={email} onPass={handleQuizPass} onFail={handleQuizFail} />}
+        confirmText=""
+        showButtons={false}
+        disableBackdropClick={true}
+      />
     </div>
   );
 };
