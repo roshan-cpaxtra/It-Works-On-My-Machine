@@ -1,7 +1,9 @@
 'use client';
 
 import React, { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useThemeMode } from '@/contexts/ThemeContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { ThemeMode } from '@/theme/theme';
 import {
   AppBar,
@@ -17,10 +19,7 @@ import {
 } from '@mui/material';
 import {
   Menu as MenuIcon,
-  AccountCircle,
   Logout,
-  Settings,
-  Person,
   Palette,
 } from '@mui/icons-material';
 
@@ -35,6 +34,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   userName = 'Guest User',
   userRole = 'GUEST'
 }) => {
+  const router = useRouter();
+  const { logout } = useAuth();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [themeMenuAnchor, setThemeMenuAnchor] = useState<null | HTMLElement>(null);
   const { themeMode, setThemeMode } = useThemeMode();
@@ -62,17 +63,8 @@ export const Navbar: React.FC<NavbarProps> = ({
 
   const handleLogout = () => {
     handleUserMenuClose();
-    console.log('Logout clicked');
-  };
-
-  const handleProfile = () => {
-    handleUserMenuClose();
-    console.log('Profile clicked');
-  };
-
-  const handleSettings = () => {
-    handleUserMenuClose();
-    console.log('Settings clicked');
+    logout();
+    router.push('/login');
   };
 
   return (
@@ -159,22 +151,6 @@ export const Navbar: React.FC<NavbarProps> = ({
                 {userRole}
               </Typography>
             </Box>
-
-            <Divider />
-
-            <MenuItem onClick={handleProfile}>
-              <ListItemIcon>
-                <Person fontSize="small" />
-              </ListItemIcon>
-              Profile
-            </MenuItem>
-
-            <MenuItem onClick={handleSettings}>
-              <ListItemIcon>
-                <Settings fontSize="small" />
-              </ListItemIcon>
-              Settings
-            </MenuItem>
 
             <Divider />
 
