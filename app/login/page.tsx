@@ -1,11 +1,38 @@
 'use client';
 
+import { useRouter } from 'next/navigation';
 import { LoginForm } from '@/components/login/LoginForm';
+import { useState } from 'react';
 
 export default function LoginPage() {
+  const router = useRouter();
+
   const handleLogin = async (email: string, password: string) => {
-    // todo: call login api
-    // router.push('/dashboard');
+    try {
+      const response = await fetch('/api/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Login failed');
+      }
+
+      if (data.token) {
+        localStorage.setItem('access_token', data.token);
+        localStorage.setItem('user', JSON.stringify(data.user));
+      }
+
+      // Redirect to dashboard or home page
+      router.push('/');
+    } catch (err) {
+      throw err;
+    }
   };
 
   return (
