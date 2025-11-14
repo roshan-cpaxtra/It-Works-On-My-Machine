@@ -2,18 +2,10 @@
 
 import { useState, useMemo, useEffect } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
+import { DataTable, Column } from "@/components/common/DataTable";
 import {
   Box,
   TextField,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  TablePagination,
-  TableSortLabel,
-  Paper,
   FormControl,
   InputLabel,
   Select,
@@ -24,7 +16,6 @@ import {
   IconButton,
   Modal,
   Button,
-  Grid,
   CircularProgress,
   Snackbar,
   Alert,
@@ -50,19 +41,12 @@ type User = {
   updatedBy: string;
 };
 
-type SortField = keyof User;
-type SortOrder = "asc" | "desc";
-
 const Users = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [toastOpen, setToastOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
-  const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(10);
-  const [sortField, setSortField] = useState<SortField>("displayName");
-  const [sortOrder, setSortOrder] = useState<SortOrder>("asc");
   const [employeeTypeFilter, setEmployeeTypeFilter] = useState<string>("all");
   const [departmentFilter, setDepartmentFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -104,79 +88,33 @@ const Users = () => {
     [users]
   );
 
-  // Filter and sort logic
-  const filteredAndSortedUsers = useMemo(() => {
-    const filtered = users.filter((user) => {
-      const matchesSearch =
-        user.displayName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        user.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        user.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        user.employeeId.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        user.role.toLowerCase().includes(searchQuery.toLowerCase());
+  // Filter functions for DataTable
+  const filterFunctions = useMemo(() => {
+    const filters: ((data: User[]) => User[])[] = [];
 
-      const matchesEmployeeType =
-        employeeTypeFilter === "all" ||
-        user.employeeType === employeeTypeFilter;
-
-      const matchesDepartment =
-        departmentFilter === "all" || user.departmentName === departmentFilter;
-
-      const matchesStatus =
-        statusFilter === "all" || user.status === statusFilter;
-
-      return (
-        matchesSearch &&
-        matchesEmployeeType &&
-        matchesDepartment &&
-        matchesStatus
+    // Employee type filter
+    if (employeeTypeFilter !== "all") {
+      filters.push((data) =>
+        data.filter((user) => user.employeeType === employeeTypeFilter)
       );
-    });
-
-    // Sort
-    filtered.sort((a, b) => {
-      const aValue = a[sortField];
-      const bValue = b[sortField];
-
-      if (aValue < bValue) return sortOrder === "asc" ? -1 : 1;
-      if (aValue > bValue) return sortOrder === "asc" ? 1 : -1;
-      return 0;
-    });
-
-    return filtered;
-  }, [
-    users,
-    searchQuery,
-    employeeTypeFilter,
-    departmentFilter,
-    statusFilter,
-    sortField,
-    sortOrder,
-  ]);
-
-  const handleSort = (field: SortField) => {
-    if (sortField === field) {
-      setSortOrder(sortOrder === "asc" ? "desc" : "asc");
-    } else {
-      setSortField(field);
-      setSortOrder("asc");
     }
-  };
 
-  const handleChangePage = (_event: unknown, newPage: number) => {
-    setPage(newPage);
-  };
+    // Department filter
+    if (departmentFilter !== "all") {
+      filters.push((data) =>
+        data.filter((user) => user.departmentName === departmentFilter)
+      );
+    }
 
-  const handleChangeRowsPerPage = (
-    event: React.ChangeEvent<HTMLInputElement>
-  ) => {
-    setRowsPerPage(parseInt(event.target.value, 10));
-    setPage(0);
-  };
+    // Status filter
+    if (statusFilter !== "all") {
+      filters.push((data) =>
+        data.filter((user) => user.status === statusFilter)
+      );
+    }
 
-  const paginatedUsers = filteredAndSortedUsers.slice(
-    page * rowsPerPage,
-    page * rowsPerPage + rowsPerPage
-  );
+    return filters;
+  }, [employeeTypeFilter, departmentFilter, statusFilter]);
 
   const getEmployeeTypeColor = (type: string) => {
     switch (type) {
@@ -192,6 +130,82 @@ const Users = () => {
         return "default";
     }
   };
+
+  // Column configuration for DataTable
+  const columns: Column<User>[] = useMemo(
+    () => [
+      {
+        id: "employeeId",
+        label: "Employee ID",
+        field: "employeeId",
+        sortable: true,
+        minWidth: 120,
+      },
+      {
+        id: "displayName",
+        label: "Name",
+        field: "displayName",
+        sortable: true,
+        minWidth: 150,
+      },
+      {
+        id: "email",
+        label: "Email",
+        field: "email",
+        sortable: true,
+        minWidth: 200,
+      },
+      {
+        id: "employeeType",
+        label: "Type",
+        field: "employeeType",
+        sortable: true,
+        minWidth: 120,
+        render: (user) => (
+          <Chip
+            label={user.employeeType.replace("_", " ")}
+            color={getEmployeeTypeColor(user.employeeType) as any}
+            size="small"
+          />
+        ),
+      },
+      {
+        id: "role",
+        label: "Role",
+        field: "role",
+        sortable: true,
+        minWidth: 120,
+      },
+      {
+        id: "departmentName",
+        label: "Department",
+        field: "departmentName",
+        sortable: true,
+        minWidth: 150,
+      },
+      {
+        id: "phoneNo",
+        label: "Phone",
+        field: "phoneNo",
+        minWidth: 130,
+      },
+      {
+        id: "status",
+        label: "Status",
+        field: "status",
+        sortable: true,
+        minWidth: 100,
+        render: (user) => (
+          <Chip
+            label={user.status}
+            color={user.status === "ACTIVE" ? "success" : "default"}
+            size="small"
+          />
+        ),
+      },
+    ],
+    []
+  );
 
   const handleOpenModal = (user: User) => {
     setSelectedUser(user);
@@ -300,129 +314,25 @@ const Users = () => {
         </Stack>
       </Stack>
 
-      <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-        Showing {paginatedUsers.length} of {filteredAndSortedUsers.length} users
-      </Typography>
-
-      {/* Table */}
-      <TableContainer component={Paper}>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell>
-                <TableSortLabel
-                  active={sortField === "employeeId"}
-                  direction={sortField === "employeeId" ? sortOrder : "asc"}
-                  onClick={() => handleSort("employeeId")}
-                >
-                  Employee ID
-                </TableSortLabel>
-              </TableCell>
-              <TableCell>
-                <TableSortLabel
-                  active={sortField === "displayName"}
-                  direction={sortField === "displayName" ? sortOrder : "asc"}
-                  onClick={() => handleSort("displayName")}
-                >
-                  Name
-                </TableSortLabel>
-              </TableCell>
-              <TableCell>
-                <TableSortLabel
-                  active={sortField === "email"}
-                  direction={sortField === "email" ? sortOrder : "asc"}
-                  onClick={() => handleSort("email")}
-                >
-                  Email
-                </TableSortLabel>
-              </TableCell>
-              <TableCell>
-                <TableSortLabel
-                  active={sortField === "employeeType"}
-                  direction={sortField === "employeeType" ? sortOrder : "asc"}
-                  onClick={() => handleSort("employeeType")}
-                >
-                  Type
-                </TableSortLabel>
-              </TableCell>
-              <TableCell>
-                <TableSortLabel
-                  active={sortField === "role"}
-                  direction={sortField === "role" ? sortOrder : "asc"}
-                  onClick={() => handleSort("role")}
-                >
-                  Role
-                </TableSortLabel>
-              </TableCell>
-              <TableCell>
-                <TableSortLabel
-                  active={sortField === "departmentName"}
-                  direction={sortField === "departmentName" ? sortOrder : "asc"}
-                  onClick={() => handleSort("departmentName")}
-                >
-                  Department
-                </TableSortLabel>
-              </TableCell>
-              <TableCell>Phone</TableCell>
-              <TableCell>
-                <TableSortLabel
-                  active={sortField === "status"}
-                  direction={sortField === "status" ? sortOrder : "asc"}
-                  onClick={() => handleSort("status")}
-                >
-                  Status
-                </TableSortLabel>
-              </TableCell>
-              <TableCell>Actions</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {paginatedUsers.map((user) => (
-              <TableRow key={user.id} hover>
-                <TableCell>{user.employeeId}</TableCell>
-                <TableCell>{user.displayName}</TableCell>
-                <TableCell>{user.email}</TableCell>
-                <TableCell>
-                  <Chip
-                    label={user.employeeType.replace("_", " ")}
-                    color={getEmployeeTypeColor(user.employeeType) as any}
-                    size="small"
-                  />
-                </TableCell>
-                <TableCell>{user.role}</TableCell>
-                <TableCell>{user.departmentName}</TableCell>
-                <TableCell>{user.phoneNo}</TableCell>
-                <TableCell>
-                  <Chip
-                    label={user.status}
-                    color={user.status === "ACTIVE" ? "success" : "default"}
-                    size="small"
-                  />
-                </TableCell>
-                <TableCell>
-                  <IconButton
-                    color="primary"
-                    onClick={() => handleOpenModal(user)}
-                    size="small"
-                  >
-                    <EditIcon />
-                  </IconButton>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
-
-      {/* Pagination */}
-      <TablePagination
+      {/* Generic DataTable */}
+      <DataTable
+        data={users}
+        columns={columns}
+        keyField="id"
+        searchQuery={searchQuery}
+        searchFields={["displayName", "email", "username", "employeeId", "role"]}
+        filterFunctions={filterFunctions}
+        defaultRowsPerPage={10}
         rowsPerPageOptions={[5, 10, 25, 50, 100]}
-        component="div"
-        count={filteredAndSortedUsers.length}
-        rowsPerPage={rowsPerPage}
-        page={page}
-        onPageChange={handleChangePage}
-        onRowsPerPageChange={handleChangeRowsPerPage}
+        actions={(user) => (
+          <IconButton
+            color="primary"
+            onClick={() => handleOpenModal(user)}
+            size="small"
+          >
+            <EditIcon />
+          </IconButton>
+        )}
       />
 
       {/* Edit User Modal */}
@@ -463,8 +373,8 @@ const Users = () => {
           </Box>
 
           {selectedUser && (
-            <Grid container spacing={2}>
-              <Grid item xs={12} sm={6}>
+            <Stack spacing={2}>
+              <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
                 <TextField
                   fullWidth
                   label="Display Name"
@@ -476,8 +386,6 @@ const Users = () => {
                     })
                   }
                 />
-              </Grid>
-              <Grid item xs={12} sm={6}>
                 <TextField
                   fullWidth
                   label="Username"
@@ -489,8 +397,8 @@ const Users = () => {
                     })
                   }
                 />
-              </Grid>
-              <Grid item xs={12} sm={6}>
+              </Stack>
+              <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
                 <TextField
                   fullWidth
                   label="Email"
@@ -503,8 +411,6 @@ const Users = () => {
                     })
                   }
                 />
-              </Grid>
-              <Grid item xs={12} sm={6}>
                 <TextField
                   fullWidth
                   label="Employee ID"
@@ -516,8 +422,8 @@ const Users = () => {
                     })
                   }
                 />
-              </Grid>
-              <Grid item xs={12} sm={6}>
+              </Stack>
+              <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
                 <TextField
                   fullWidth
                   label="Phone Number"
@@ -529,8 +435,6 @@ const Users = () => {
                     })
                   }
                 />
-              </Grid>
-              <Grid item xs={12} sm={6}>
                 <FormControl fullWidth>
                   <InputLabel>Employee Type</InputLabel>
                   <Select
@@ -549,8 +453,8 @@ const Users = () => {
                     <MenuItem value="INTERN">Intern</MenuItem>
                   </Select>
                 </FormControl>
-              </Grid>
-              <Grid item xs={12} sm={6}>
+              </Stack>
+              <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
                 <FormControl fullWidth>
                   <InputLabel>Role</InputLabel>
                   <Select
@@ -573,8 +477,6 @@ const Users = () => {
                     <MenuItem value="Coordinator">Coordinator</MenuItem>
                   </Select>
                 </FormControl>
-              </Grid>
-              <Grid item xs={12} sm={6}>
                 <TextField
                   fullWidth
                   label="Department Name"
@@ -586,8 +488,8 @@ const Users = () => {
                     })
                   }
                 />
-              </Grid>
-              <Grid item xs={12} sm={6}>
+              </Stack>
+              <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
                 <TextField
                   fullWidth
                   label="Department Code"
@@ -599,8 +501,6 @@ const Users = () => {
                     })
                   }
                 />
-              </Grid>
-              <Grid item xs={12} sm={6}>
                 <FormControl fullWidth>
                   <InputLabel>Status</InputLabel>
                   <Select
@@ -617,8 +517,8 @@ const Users = () => {
                     <MenuItem value="INACTIVE">Inactive</MenuItem>
                   </Select>
                 </FormControl>
-              </Grid>
-            </Grid>
+              </Stack>
+            </Stack>
           )}
 
           <Stack
