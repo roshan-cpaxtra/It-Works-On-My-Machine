@@ -1,11 +1,13 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
+import { useAuth } from '@/contexts/AuthContext';
 import { LoginForm } from '@/components/login/LoginForm';
 import { useState } from 'react';
 
 export default function LoginPage() {
   const router = useRouter();
+  const { loginWithApiResponse } = useAuth();
 
   const handleLogin = async (email: string, password: string) => {
     try {
@@ -23,10 +25,8 @@ export default function LoginPage() {
         throw new Error(data.error || 'Login failed');
       }
 
-      if (data.token) {
-        localStorage.setItem('access_token', data.token);
-        localStorage.setItem('user', JSON.stringify(data.user));
-      }
+      // Use AuthContext to handle login
+      loginWithApiResponse(data);
 
       // Redirect to dashboard or home page
       router.push('/');
