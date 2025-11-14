@@ -52,10 +52,11 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSubmit }) => {
 
     try {
       if (onSubmit) {
-        onSubmit(email, password);
+        await onSubmit(email, password);
       }
-    } catch {
-      setError('Login failed. Please try again.');
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Login failed. Please try again.';
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
