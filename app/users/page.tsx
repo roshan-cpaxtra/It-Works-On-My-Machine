@@ -117,7 +117,10 @@ const Users = () => {
 
         // Get token from localStorage
         const userData = localStorage.getItem('user');
-        const token = userData ? JSON.parse(userData).token : '';
+        const parsedUser = userData ? JSON.parse(userData) : null;
+        const token = parsedUser?.accessToken || parsedUser?.token || '';
+
+        console.log('🔑 Retrieved token for users API:', token ? `${token.substring(0, 20)}...` : 'NO TOKEN');
 
         // Call Next.js API route (which proxies to backend)
         const response = await fetch("/api/users", {
@@ -311,7 +314,8 @@ const Users = () => {
 
       // Get token from localStorage
       const userData = localStorage.getItem('user');
-      const token = userData ? JSON.parse(userData).token : '';
+      const parsedUser = userData ? JSON.parse(userData) : null;
+      const token = parsedUser?.accessToken || parsedUser?.token || '';
 
       // Call Next.js API route to update user
       const response = await fetch(`/api/users/${selectedUser.id}`, {
@@ -404,7 +408,8 @@ const Users = () => {
 
       // Get token from localStorage
       const userData = localStorage.getItem('user');
-      const token = userData ? JSON.parse(userData).token : '';
+      const parsedUser = userData ? JSON.parse(userData) : null;
+      const token = parsedUser?.accessToken || parsedUser?.token || '';
 
       // Call Next.js API route to create user
       const response = await fetch("/api/users", {

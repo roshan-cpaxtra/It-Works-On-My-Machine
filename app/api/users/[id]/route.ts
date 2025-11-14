@@ -65,7 +65,10 @@ export async function PUT(
   try {
     const authHeader = request.headers.get('authorization');
 
+    console.log('🔐 [PUT /api/users/:id] Authorization header:', authHeader ? `${authHeader.substring(0, 30)}...` : 'MISSING');
+
     if (!authHeader) {
+      console.error('❌ [PUT /api/users/:id] No authorization header provided');
       return NextResponse.json(
         {
           success: false,
@@ -77,6 +80,8 @@ export async function PUT(
 
     const { id } = params;
     const body = await request.json();
+
+    console.log(`📤 [PUT /api/users/${id}] Updating user:`, body.username);
 
     // Proxy to real backend API
     const backendResponse = await fetch(`${BACKEND_API_URL}/v1/users/${id}`, {
@@ -90,7 +95,10 @@ export async function PUT(
 
     const data = await backendResponse.json();
 
+    console.log(`📥 [PUT /api/users/${id}] Backend response status: ${backendResponse.status}`, data.success ? '✅' : '❌');
+
     if (!backendResponse.ok) {
+      console.error(`❌ [PUT /api/users/${id}] Backend error:`, data);
       return NextResponse.json(
         {
           success: false,
@@ -100,6 +108,7 @@ export async function PUT(
       );
     }
 
+    console.log(`✅ [PUT /api/users/${id}] User updated successfully`);
     return NextResponse.json(data, { status: 200 });
 
   } catch (error) {

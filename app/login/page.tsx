@@ -11,6 +11,8 @@ export default function LoginPage() {
 
   const handleLogin = async (email: string, password: string) => {
     try {
+      console.log('📤 Sending login request:', { email });
+
       const response = await fetch('/api/login', {
         method: 'POST',
         headers: {
@@ -20,17 +22,22 @@ export default function LoginPage() {
       });
 
       const data = await response.json();
+      console.log('📥 Login response:', data);
 
       if (!response.ok) {
-        throw new Error(data.error || 'Login failed');
+        console.error('❌ Login failed:', data);
+        throw new Error(data.message || data.error || 'Login failed');
       }
 
       // Use AuthContext to handle login
+      console.log('✅ Login successful, processing response...');
       loginWithApiResponse(data);
 
       // Redirect to dashboard or home page
+      console.log('🚀 Redirecting to home page...');
       router.push('/');
     } catch (err) {
+      console.error('💥 Login error:', err);
       throw err;
     }
   };

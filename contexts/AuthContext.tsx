@@ -9,19 +9,29 @@ export interface ApiPermission {
   id: string;
   resource: string;
   permission: 'read' | 'write' | 'view';
+  description: string;
+}
+
+export interface ApiRole {
+  id: string;
+  name: UserRole;
+  permissions: ApiPermission[];
 }
 
 export interface LoginApiResponse {
   success: boolean;
-  user: {
-    id: string;
-    email: string;
-    name: string;
-    token: string;
-    role: UserRole;
-    permission: ApiPermission[];
+  message: string;
+  data: {
+    accessToken: string;
+    refreshToken: string;
+    sessionId: string;
+    username: string;
+    issuedAt: string;
+    expiresAt: string;
+    role: ApiRole;
   };
-  token: string;
+  correlationId: string;
+  timestamp: string;
 }
 
 // Simplified permission system: view and write for each module
@@ -208,25 +218,40 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const loginWithApiResponse = (apiResponse: LoginApiResponse) => {
     if (!apiResponse.success) {
-      throw new Error('Login failed');
+      throw new Error(apiResponse.message || 'Login failed');
     }
 
-    const { user: apiUser } = apiResponse;
+    const { data } = apiResponse;
 
     // Create user object from API response
     const newUser: User = {
-      id: apiUser.id,
-      name: apiUser.name,
-      email: apiUser.email,
-      role: apiUser.role,
-      token: apiUser.token,
+      id: data.sessionId,
+      name: data.username,
+      email: data.username,
+      role: data.role.name,
+      token: data.accessToken,
     };
 
     setUser(newUser);
     setIsAuthenticated(true);
 
-    // Save entire API response to localStorage as 'user'
-    localStorage.setItem('user', JSON.stringify(apiUser));
+    // Save comprehensive user data to localStorage
+    const userDataToStore = {
+      id: data.sessionId,
+      name: data.username,
+      email: data.username,
+      role: data.role.name,
+      token: data.accessToken,
+      accessToken: data.accessToken,
+      refreshToken: data.refreshToken,
+      sessionId: data.sessionId,
+      issuedAt: data.issuedAt,
+      expiresAt: data.expiresAt,
+      permissions: data.role.permissions,
+    };
+
+    console.log('🔐 Storing user data in localStorage:', userDataToStore);
+    localStorage.setItem('user', JSON.stringify(userDataToStore));
   };
 
   const logout = () => {
