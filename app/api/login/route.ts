@@ -29,17 +29,22 @@ export async function POST(request: Request) {
     // }
 
     // Replace this with actual authentication logic
+    // Different users for testing permissions:
+    // admin@test.com -> write permission for users
+    // user@test.com -> view permission for users (cannot edit)
+    const hasWritePermission = email.toLowerCase().includes('admin');
+
     const mockUser = {
       id: '1',
       email: email,
-      name: 'User',
+      name: hasWritePermission ? 'Admin User' : 'Regular User',
       token: 'mock-token',
-      role: 'ADMIN',
+      role: hasWritePermission ? 'ADMIN' : 'USER',
       permission: [
         {
           id: '',
           resource: 'user',
-          permission: 'view'
+          permission: hasWritePermission ? 'write' : 'view'
         },
         {
           id: '',
