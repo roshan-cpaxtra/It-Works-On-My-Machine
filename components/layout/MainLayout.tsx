@@ -13,9 +13,14 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [desktopOpen, setDesktopOpen] = useState(true);
 
   const handleDrawerToggle = () => {
-    setMobileOpen(!mobileOpen);
+    if (isMobile) {
+      setMobileOpen(!mobileOpen);
+    } else {
+      setDesktopOpen(!desktopOpen);
+    }
   };
 
   return (
@@ -27,7 +32,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
       />
 
       <Sidebar
-        open={isMobile ? mobileOpen : true}
+        open={isMobile ? mobileOpen : desktopOpen}
         onClose={handleDrawerToggle}
         variant={isMobile ? 'temporary' : 'permanent'}
       />
@@ -37,9 +42,20 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
         sx={{
           flexGrow: 1,
           p: 3,
-          width: { md: `calc(100% - ${DRAWER_WIDTH}px)` },
+          width: {
+            xs: '100%',
+            md: desktopOpen ? `calc(100% - ${DRAWER_WIDTH}px)` : '100%',
+          },
+          marginLeft: {
+            xs: 0,
+            md: 0,
+          },
           bgcolor: 'background.default',
           minHeight: '100vh',
+          transition: theme.transitions.create(['width', 'margin'], {
+            easing: theme.transitions.easing.sharp,
+            duration: theme.transitions.duration.enteringScreen,
+          }),
         }}
       >
         <Toolbar />

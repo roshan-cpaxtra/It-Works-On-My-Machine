@@ -18,6 +18,9 @@ import {
   Inventory,
   ExpandLess,
   ExpandMore,
+  Dashboard as DashboardIcon,
+  Security,
+  Home,
 } from '@mui/icons-material';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
@@ -32,6 +35,11 @@ interface NavItem {
 const DRAWER_WIDTH = 260;
 
 const navigationItems: NavItem[] = [
+  {
+    title: 'Home',
+    path: '/',
+    icon: <Home />,
+  },
   {
     title: 'Users',
     path: '/users',
@@ -139,11 +147,40 @@ export const Sidebar: React.FC<SidebarProps> = ({
     </>
   );
 
+  if (variant === 'temporary') {
+    return (
+      <Drawer
+        variant="temporary"
+        open={open}
+        onClose={onClose}
+        sx={{
+          width: DRAWER_WIDTH,
+          flexShrink: 0,
+          '& .MuiDrawer-paper': {
+            width: DRAWER_WIDTH,
+            boxSizing: 'border-box',
+            borderRight: '1px solid',
+            borderColor: 'divider',
+          },
+        }}
+        ModalProps={{
+          keepMounted: true, // Better mobile performance
+        }}
+      >
+        {drawerContent}
+      </Drawer>
+    );
+  }
+
+  // Desktop drawer - completely hides when closed
+  if (!open) {
+    return null;
+  }
+
   return (
     <Drawer
-      variant={variant}
+      variant="permanent"
       open={open}
-      onClose={onClose}
       sx={{
         width: DRAWER_WIDTH,
         flexShrink: 0,
@@ -153,9 +190,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
           borderRight: '1px solid',
           borderColor: 'divider',
         },
-      }}
-      ModalProps={{
-        keepMounted: true, // Better mobile performance
       }}
     >
       {drawerContent}
