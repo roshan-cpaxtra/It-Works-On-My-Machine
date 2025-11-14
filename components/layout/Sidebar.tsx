@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Drawer,
   List,
@@ -21,6 +21,8 @@ import {
   Dashboard as DashboardIcon,
   Security,
   Home,
+  PersonAdd,
+  List as ListIcon,
 } from '@mui/icons-material';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
@@ -30,11 +32,15 @@ interface NavItem {
   path: string;
   icon: React.ReactNode;
   children?: NavItem[];
+  requiresPermission?: {
+    resource: string;
+    permission: 'read' | 'write' | 'view';
+  };
 }
 
 const DRAWER_WIDTH = 260;
 
-const navigationItems: NavItem[] = [
+const getNavigationItems = (hasWritePermission: boolean): NavItem[] => [
   {
     title: 'Home',
     path: '/',
@@ -44,6 +50,22 @@ const navigationItems: NavItem[] = [
     title: 'Users',
     path: '/users',
     icon: <People />,
+    children: [
+      {
+        title: 'View Users',
+        path: '/users',
+        icon: <ListIcon />,
+      },
+      ...(hasWritePermission ? [{
+        title: 'Create User',
+        path: '/users/create',
+        icon: <PersonAdd />,
+        requiresPermission: {
+          resource: 'user',
+          permission: 'write' as const,
+        },
+      }] : []),
+    ],
   },
   {
     title: 'Products',
@@ -65,6 +87,32 @@ export const Sidebar: React.FC<SidebarProps> = ({
 }) => {
   const pathname = usePathname();
   const [expandedItems, setExpandedItems] = React.useState<string[]>([]);
+  const [hasWritePermission, setHasWritePermission] = React.useState(false);
+
+  useEffect(() => {
+    // Check user permissions from localStorage
+    const checkPermissions = () => {
+      try {
+        const userStr = localStorage.getItem("user");
+        if (userStr) {
+          const user = JSON.parse(userStr);
+          const userPermission = user.permission?.find(
+            (p: any) => p.resource === "user"
+          );
+          setHasWritePermission(userPermission?.permission === "write");
+        }
+      } catch (err) {
+        console.error("Error checking permissions:", err);
+      }
+    };
+
+    checkPermissions();
+  }, []);
+
+  const navigationItems = React.useMemo(
+    () => getNavigationItems(hasWritePermission),
+    [hasWritePermission]
+  );
 
   const handleItemClick = (itemPath: string) => {
     if (expandedItems.includes(itemPath)) {
