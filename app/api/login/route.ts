@@ -28,6 +28,13 @@ export async function POST(request: Request) {
     //   );
     // }
 
+    if (password !== '1111') {
+      return NextResponse.json(
+        { error: 'Email and password are required.' },
+        { status: 400 }
+      );
+    }
+
     // Replace this with actual authentication logic
     // Different users for testing permissions:
     // admin@test.com -> write permission for users
