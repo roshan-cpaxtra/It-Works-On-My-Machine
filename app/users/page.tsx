@@ -118,7 +118,13 @@ const Users = () => {
     const fetchUsers = async () => {
       try {
         setLoading(true);
-        const response = await fetch("/api/users");
+        const response = await fetch("http://localhost:8080/v1/users", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({}),
+        });
         if (!response.ok) {
           throw new Error("Failed to fetch users");
         }
@@ -286,10 +292,57 @@ const Users = () => {
     setSelectedUser(null);
   };
 
-  const handleSaveUser = () => {
-    // Handle save logic here
-    console.log("Saving user:", selectedUser);
-    handleCloseModal();
+  const handleSaveUser = async () => {
+    if (!selectedUser) return;
+
+    try {
+      // Get user info from localStorage for API headers
+      const userStr = localStorage.getItem("user");
+      const user = userStr ? JSON.parse(userStr) : null;
+      const userPermission = user?.permission?.find(
+        (p: any) => p.resource === "user"
+      );
+
+      const response = await fetch("http://localhost:8080/v1/users", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          "x-user-permission": userPermission?.permission || "view",
+          "x-user-email": user?.email || "unknown",
+        },
+        body: JSON.stringify(selectedUser),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to update user");
+      }
+
+      setToastMessage("User updated successfully!");
+      setToastSeverity("success");
+      setToastOpen(true);
+      handleCloseModal();
+
+      // Refresh users list
+      const usersResponse = await fetch("http://localhost:8080/v1/users", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({}),
+      });
+      if (usersResponse.ok) {
+        const usersData = await usersResponse.json();
+        setUsers(usersData);
+      }
+    } catch (err) {
+      setToastMessage(
+        err instanceof Error ? err.message : "An error occurred"
+      );
+      setToastSeverity("error");
+      setToastOpen(true);
+    }
   };
 
   const handleCloseHackAlert = () => {
@@ -332,7 +385,7 @@ const Users = () => {
         (p: any) => p.resource === "user"
       );
 
-      const response = await fetch("/api/users", {
+      const response = await fetch("http://localhost:8080/v1/users", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -354,7 +407,13 @@ const Users = () => {
       handleCloseCreateModal();
 
       // Refresh users list
-      const usersResponse = await fetch("/api/users");
+      const usersResponse = await fetch("http://localhost:8080/v1/users", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({}),
+      });
       if (usersResponse.ok) {
         const usersData = await usersResponse.json();
         setUsers(usersData);

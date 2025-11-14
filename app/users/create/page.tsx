@@ -105,7 +105,7 @@ const CreateUser = () => {
         (p: any) => p.resource === "user"
       );
 
-      const response = await fetch("/api/users", {
+      const response = await fetch("http://localhost:8080/v1/users", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
